@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { UserMenu } from "@/components/user-menu";
+import { SearchBar } from "@/components/search-bar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +61,9 @@ async function DashboardContent() {
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
             <span className="font-bold text-xl tracking-tight">StudyFlow</span>
+          </div>
+          <div className="hidden sm:block flex-1 max-w-md mx-6">
+            <SearchBar />
           </div>
           <div className="flex items-center gap-4">
             <UserMenu user={user} />
