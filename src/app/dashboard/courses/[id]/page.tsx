@@ -149,7 +149,7 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
               {typedLectures.map((lecture) => (
                 <Link
                   key={lecture.id}
-                  href={`/dashboard/lectures/${lecture.id}`}
+                  href={`/dashboard/courses/${typedCourse.id}/lectures/${lecture.id}`}
                   className="transition hover:-translate-y-0.5"
                 >
                   <Card className="h-full hover:border-primary/50 transition-colors">
