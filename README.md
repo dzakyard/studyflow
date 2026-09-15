@@ -1,109 +1,98 @@
-<a href="https://demo-nextjs-with-supabase.vercel.app/">
-  <img alt="Next.js and Supabase Starter Kit - the fastest way to build apps with Next.js and Supabase" src="https://demo-nextjs-with-supabase.vercel.app/opengraph-image.png">
-  <h1 align="center">Next.js and Supabase Starter Kit</h1>
-</a>
+# StudyFlow - AI-Powered Study Platform for College Students
 
-<p align="center">
- The fastest way to build apps with Next.js and Supabase
-</p>
+StudyFlow is an intelligent, distraction-free study companion designed for university students. It transforms raw, fragmented lecture notes into structured, high-yield study materials using Google Gemini 2.0 and Supabase.
 
-<p align="center">
-  <a href="#features"><strong>Features</strong></a> ·
-  <a href="#demo"><strong>Demo</strong></a> ·
-  <a href="#deploy-to-vercel"><strong>Deploy to Vercel</strong></a> ·
-  <a href="#clone-and-run-locally"><strong>Clone and run locally</strong></a> ·
-  <a href="#feedback-and-issues"><strong>Feedback and issues</strong></a>
-  <a href="#more-supabase-examples"><strong>More Examples</strong></a>
-</p>
-<br/>
+---
 
 ## Features
 
-- Works across the entire [Next.js](https://nextjs.org) stack
-  - App Router
-  - Pages Router
-  - Proxy
-  - Client
-  - Server
-  - It just works!
-- supabase-ssr. A package to configure Supabase Auth to use cookies
-- Password-based authentication block installed via the [Supabase UI Library](https://supabase.com/ui/docs/nextjs/password-based-auth)
-- Styling with [Tailwind CSS](https://tailwindcss.com)
-- Components with [shadcn/ui](https://ui.shadcn.com/)
-- Optional deployment with [Supabase Vercel Integration and Vercel deploy](#deploy-your-own)
-  - Environment variables automatically assigned to Vercel project
+### Core Study Workflow
+- **Distraction-Free Minimal Editor:** Clean markdown note-taking environment with automatic 5-second debounced auto-saving.
+- **AI-Powered Note Expansion:** One-click expansion powered by Gemini 2.0 Flash that turns bullet points into detailed conceptual explanations, real-world examples, and step-by-step proofs grounded in course context.
+- **Section-Level Re-Expansion & Depth Control:** Select specific sections to regenerate, make more concise, or expand with customizable depth levels (Brief, Standard, Deep Dive).
+- **Executive Summary & Cheat Sheet:** Automatically extracts key takeaways, core formulas, and exam tips side-by-side with your full notes.
+- **Course & Lecture Dashboard:** Organize materials by course and lecture date with real-time statistics, progress tracking, and global full-text search.
 
-## Demo
+### Phase 2 Study Acceleration Tools
+- **Auto-Generated Flashcards:** Convert lecture notes into 5–10 active recall flashcards with 3D flip card interactions and mastery tracking.
+- **Syllabus Upload & Parsing:** Upload syllabus documents (`.txt` / `.md`) to automatically extract structured topics and feed them into the course context.
+- **Inline Q&A (Study Buddy):** Ask targeted clarifying questions about specific formulas or concepts and receive grounded explanations.
+- **Exam Study Guide Generator:** Synthesize multiple lectures across an entire semester or exam module into a single high-yield study guide.
+- **Exporting:** Download lecture notes as clean Markdown (`.md`) or generate print-optimized PDF study packets.
+- **Collaborative Sharing & Version History:** Share read-only snapshots via unique links and track note revisions with one-click restore.
 
-You can view a fully working demo at [demo-nextjs-with-supabase.vercel.app](https://demo-nextjs-with-supabase.vercel.app/).
+---
 
-## Deploy to Vercel
+## Tech Stack
 
-Vercel deployment will guide you through creating a Supabase account and project.
+- **Framework:** [Next.js 16 (App Router & Server Actions)](https://nextjs.org/)
+- **Database & Auth:** [Supabase](https://supabase.com/) (PostgreSQL with Row Level Security, SSR Auth & OAuth)
+- **AI Engine:** [Google Gemini 2.0 Flash](https://ai.google.dev/) via `@google/generative-ai`
+- **Styling & UI:** [Tailwind CSS](https://tailwindcss.com/) & [shadcn/ui](https://ui.shadcn.com/)
+- **Icons:** [Lucide Icons](https://lucide.dev/)
 
-After installation of the Supabase integration, all relevant environment variables will be assigned to the project so the deployment is fully functioning.
+---
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&project-name=nextjs-with-supabase&repository-name=nextjs-with-supabase&demo-title=nextjs-with-supabase&demo-description=This+starter+configures+Supabase+Auth+to+use+cookies%2C+making+the+user%27s+session+available+throughout+the+entire+Next.js+app+-+Client+Components%2C+Server+Components%2C+Route+Handlers%2C+Server+Actions+and+Middleware.&demo-url=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2F&external-id=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&demo-image=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2Fopengraph-image.png)
+## Getting Started Locally
 
-The above will also clone the Starter kit to your GitHub, you can clone that locally and develop locally.
+### 1. Prerequisites
+- Node.js 18+ or 20+
+- A Supabase account and project
+- A Google Gemini API Key from Google AI Studio
 
-If you wish to just develop locally and not deploy to Vercel, [follow the steps below](#clone-and-run-locally).
+### 2. Clone the Repository
+```bash
+git clone https://github.com/dzakyard/studyflow.git
+cd studyflow
+```
 
-## Clone and run locally
+### 3. Install Dependencies
+```bash
+npm install
+```
 
-1. You'll first need a Supabase project which can be made [via the Supabase dashboard](https://database.new)
+### 4. Configure Environment Variables
+Create a `.env.local` file by copying `.env.example`:
+```bash
+cp .env.example .env.local
+```
 
-2. Create a Next.js app using the Supabase Starter template npx command
+Fill in your project credentials:
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+GEMINI_API_KEY=your-gemini-api-key
+```
 
-   ```bash
-   npx create-next-app --example with-supabase with-supabase-app
-   ```
+### 5. Run Database Migrations
+Execute the SQL migration scripts in order in your Supabase SQL Editor:
+1. `supabase/migrations/001_create_courses_and_lectures.sql`
+2. `supabase/migrations/002_create_shared_lectures_and_versions.sql`
+3. `supabase/migrations/003_create_phase2_tables.sql`
 
-   ```bash
-   yarn create next-app --example with-supabase with-supabase-app
-   ```
+### 6. Start the Development Server
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) to view StudyFlow in your browser.
 
-   ```bash
-   pnpm create next-app --example with-supabase with-supabase-app
-   ```
+---
 
-3. Use `cd` to change into the app's directory
+## Deployment to Vercel
 
-   ```bash
-   cd with-supabase-app
-   ```
+1. Push your repository to GitHub.
+2. Import the project in [Vercel](https://vercel.com/new).
+3. Under **Environment Variables**, configure:
+   - `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL.
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anon / public key.
+   - `GEMINI_API_KEY`: Your Google Gemini API key.
+4. In your Supabase Dashboard:
+   - Navigate to **Authentication -> URL Configuration**.
+   - Add your production Vercel URL (e.g. `https://your-studyflow-app.vercel.app`) to **Site URL** and **Redirect URLs** (including `https://your-studyflow-app.vercel.app/auth/callback`).
+5. Click **Deploy** on Vercel.
 
-4. Rename `.env.example` to `.env.local` and update the following:
+---
 
-  ```env
-  NEXT_PUBLIC_SUPABASE_URL=[INSERT SUPABASE PROJECT URL]
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=[INSERT SUPABASE PROJECT API PUBLISHABLE OR ANON KEY]
-  ```
-  > [!NOTE]
-  > This example uses `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, which refers to Supabase's new **publishable** key format.
-  > Both legacy **anon** keys and new **publishable** keys can be used with this variable name during the transition period. Supabase's dashboard may show `NEXT_PUBLIC_SUPABASE_ANON_KEY`; its value can be used in this example.
-  > See the [full announcement](https://github.com/orgs/supabase/discussions/29260) for more information.
+## License
 
-  Both `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` can be found in [your Supabase project's API settings](https://supabase.com/dashboard/project/_?showConnect=true)
-
-5. You can now run the Next.js local development server:
-
-   ```bash
-   npm run dev
-   ```
-
-   The starter kit should now be running on [localhost:3000](http://localhost:3000/).
-
-6. This template comes with the default shadcn/ui style initialized. If you instead want other ui.shadcn styles, delete `components.json` and [re-install shadcn/ui](https://ui.shadcn.com/docs/installation/next)
-
-> Check out [the docs for Local Development](https://supabase.com/docs/guides/getting-started/local-development) to also run Supabase locally.
-
-## Feedback and issues
-
-Please file feedback and issues over on the [Supabase GitHub org](https://github.com/supabase/supabase/issues/new/choose).
-
-## More Supabase examples
-
-- [Next.js Subscription Payments Starter](https://github.com/vercel/nextjs-subscription-payments)
-- [Cookie-based Auth and the Next.js 13 App Router (free course)](https://youtube.com/playlist?list=PL5S4mPUpp4OtMhpnp93EFSo42iQ40XjbF)
-- [Supabase Auth and the Next.js App Router](https://github.com/supabase/supabase/tree/master/examples/auth/nextjs)
+MIT License. Designed and built with ❤️ for college students.
