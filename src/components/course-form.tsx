@@ -9,7 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TagInput } from "@/components/tag-input";
 import { createCourse, updateCourse, CourseFormData } from "@/app/actions/courses";
+import { parseSyllabusFileAction } from "@/app/actions/phase2";
 import { Course } from "@/types/database";
+import { UploadCloud, Loader2, Sparkles } from "lucide-react";
 
 interface CourseFormProps {
   initialData?: Course;
@@ -28,7 +30,34 @@ export function CourseForm({ initialData, isEdit = false }: CourseFormProps) {
     initialData?.textbook_reference || ""
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleSyllabusFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsParsing(true);
+      setError(null);
+      const text = await file.text();
+      if (!text.trim()) {
+        throw new Error("File is empty");
+      }
+
+      const result = await parseSyllabusFileAction(text);
+      if (result?.topics && result.topics.length > 0) {
+        // Merge with existing topics without duplicates
+        setSyllabusTopics((prev) => Array.from(new Set([...prev, ...result.topics])));
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to parse syllabus file");
+    } finally {
+      setIsParsing(false);
+      // Reset input value
+      e.target.value = "";
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,11 +137,34 @@ export function CourseForm({ initialData, isEdit = false }: CourseFormProps) {
             />
           </div>
 
-          {/* Syllabus Topics */}
+          {/* Syllabus Topics & File Upload */}
           <div className="space-y-2">
-            <Label>Syllabus Topics</Label>
+            <div className="flex items-center justify-between">
+              <Label>Syllabus Topics</Label>
+              <label
+                htmlFor="syllabus-upload"
+                className={`inline-flex items-center gap-1.5 text-xs font-medium cursor-pointer text-primary hover:underline ${
+                  isParsing ? "opacity-50 pointer-events-none" : ""
+                }`}
+              >
+                {isParsing ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <UploadCloud className="h-3.5 w-3.5" />
+                )}
+                {isParsing ? "Extracting topics..." : "Import from Syllabus (.txt / .md)"}
+                <input
+                  id="syllabus-upload"
+                  type="file"
+                  accept=".txt,.md"
+                  className="hidden"
+                  onChange={handleSyllabusFileUpload}
+                  disabled={isParsing}
+                />
+              </label>
+            </div>
             <p className="text-xs text-muted-foreground">
-              Add topics covered in this course to ground AI note expansions.
+              Add topics covered in this course manually or upload a syllabus file to auto-extract with AI.
             </p>
             <TagInput
               value={syllabusTopics}

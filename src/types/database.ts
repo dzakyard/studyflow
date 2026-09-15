@@ -150,3 +150,23 @@ export interface NoteVersion {
   summary: string | null;
   created_at: string;
 }
+
+export interface Flashcard {
+  id: string;
+  lecture_id: string;
+  user_id: string;
+  question: string;
+  answer: string;
+  confidence_level: number;
+  created_at: string;
+}
+
+export interface InlineQA {
+  id: string;
+  lecture_id: string;
+  user_id: string;
+  selected_concept: string;
+  question: string;
+  answer: string;
+  created_at: string;
+}
