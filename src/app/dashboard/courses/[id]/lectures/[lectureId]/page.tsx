@@ -7,11 +7,11 @@ import Link from "next/link";
 import { Course, Lecture } from "@/types/database";
 
 interface LecturePageProps {
-  params: Promise<{ courseId: string; lectureId: string }>;
+  params: Promise<{ id: string; lectureId: string }>;
 }
 
 export default async function LecturePage({ params }: LecturePageProps) {
-  const { courseId, lectureId } = await params;
+  const { id: courseId, lectureId } = await params;
   const supabase = await createClient();
   const {
     data: { user },
