@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { expandNotes, summarizeNotes, checkRateLimit } from "@/lib/ai/gemini";
+import { expandNotes, summarizeNotes, reExpandSection, checkRateLimit } from "@/lib/ai/gemini";
 import { DepthLevel } from "@/types/database";
 
 export async function triggerAiExpansion(lectureId: string, depthLevel: DepthLevel = "standard") {
@@ -76,4 +76,48 @@ export async function triggerAiExpansion(lectureId: string, depthLevel: DepthLev
     summary: summaryText,
     remainingExpansions: rateLimit.remaining,
   };
+}
+
+export async function triggerSectionReExpansion(
+  lectureId: string,
+  sectionText: string,
+  mode: "more_detail" | "more_concise" | "regenerate"
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("Unauthorized");
+  }
+
+  const { data: lecture, error: lectureError } = await supabase
+    .from("lectures")
+    .select("*, courses(*)")
+    .eq("id", lectureId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (lectureError || !lecture) {
+    throw new Error("Lecture not found");
+  }
+
+  const course = lecture.courses as unknown as {
+    name: string;
+    subject_area: string;
+    syllabus_topics: string[];
+    textbook_reference: string | null;
+  };
+
+  const refinedSection = await reExpandSection({
+    courseName: course.name,
+    subjectArea: course.subject_area,
+    syllabusTopics: course.syllabus_topics,
+    textbookReference: course.textbook_reference,
+    sectionText,
+    mode,
+  });
+
+  return { refinedSection };
 }

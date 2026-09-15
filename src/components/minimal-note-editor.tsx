@@ -2,12 +2,20 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { updateLectureNotes } from "@/app/actions/lectures";
-import { triggerAiExpansion } from "@/app/actions/ai";
+import { triggerAiExpansion, triggerSectionReExpansion } from "@/app/actions/ai";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Check,
   Loader2,
@@ -21,6 +29,10 @@ import {
   CheckCircle2,
   Edit2,
   Eye,
+  SlidersHorizontal,
+  RefreshCw,
+  PlusCircle,
+  MinusCircle,
 } from "lucide-react";
 import { Lecture, Course, DepthLevel } from "@/types/database";
 import { MarkdownViewer } from "@/components/markdown-viewer";
@@ -47,9 +59,13 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("notes");
 
-  // Editable expanded notes & summary modes (Issue #13)
+  // Editable expanded notes & summary modes
   const [isEditingExpanded, setIsEditingExpanded] = useState(false);
   const [isEditingSummary, setIsEditingSummary] = useState(false);
+
+  // Section re-expansion state (Issue #14)
+  const [isReExpandingSection, setIsReExpandingSection] = useState(false);
+  const minimalTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -59,7 +75,8 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
       newDate: string,
       newMinimal: string,
       newExpanded?: string,
-      newSummary?: string
+      newSummary?: string,
+      newDepth?: DepthLevel
     ) => {
       setSaveStatus("saving");
       try {
@@ -69,6 +86,7 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
           minimal_notes: newMinimal,
           expanded_notes: newExpanded !== undefined ? newExpanded : undefined,
           summary: newSummary !== undefined ? newSummary : undefined,
+          depth_level: newDepth || depthLevel,
         });
         setSaveStatus("saved");
       } catch (err) {
@@ -76,7 +94,7 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
         setSaveStatus("unsaved");
       }
     },
-    [lecture.id]
+    [lecture.id, depthLevel]
   );
 
   // Auto-save debounced every 5 seconds
@@ -86,7 +104,8 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
       title === (lecture.title || "") &&
       lectureDate === lecture.lecture_date &&
       expandedNotes === (lecture.expanded_notes || "") &&
-      summary === (lecture.summary || "")
+      summary === (lecture.summary || "") &&
+      depthLevel === lecture.depth_level
     ) {
       return;
     }
@@ -98,7 +117,7 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
     }
 
     saveTimerRef.current = setTimeout(() => {
-      saveContent(title, lectureDate, minimalNotes, expandedNotes, summary);
+      saveContent(title, lectureDate, minimalNotes, expandedNotes, summary, depthLevel);
     }, 5000);
 
     return () => {
@@ -106,7 +125,7 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
         clearTimeout(saveTimerRef.current);
       }
     };
-  }, [minimalNotes, title, lectureDate, expandedNotes, summary, lecture, saveContent]);
+  }, [minimalNotes, title, lectureDate, expandedNotes, summary, depthLevel, lecture, saveContent]);
 
   const handleExpand = async () => {
     if (!minimalNotes.trim()) {
@@ -118,11 +137,10 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
     setIsExpanding(true);
     setExpandStep("expanding");
 
-    await saveContent(title, lectureDate, minimalNotes, expandedNotes, summary);
+    await saveContent(title, lectureDate, minimalNotes, expandedNotes, summary, depthLevel);
 
     try {
       const timer = setTimeout(() => setExpandStep("summarizing"), 2500);
-
       const result = await triggerAiExpansion(lecture.id, depthLevel);
       clearTimeout(timer);
 
@@ -141,6 +159,47 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
     } finally {
       setIsExpanding(false);
       setExpandStep("idle");
+    }
+  };
+
+  // Handle Section-level Re-expansion (Issue #14)
+  const handleSectionReExpand = async (mode: "more_detail" | "more_concise" | "regenerate") => {
+    const textarea = minimalTextareaRef.current;
+    let selectedText = "";
+
+    if (textarea && textarea.selectionStart !== textarea.selectionEnd) {
+      selectedText = textarea.value.substring(textarea.selectionStart, textarea.selectionEnd).trim();
+    }
+
+    // If no text explicitly highlighted, use the last non-empty bullet or paragraph
+    if (!selectedText) {
+      const lines = minimalNotes.split("\n").filter((l) => l.trim().length > 0);
+      selectedText = lines[lines.length - 1] || minimalNotes;
+    }
+
+    if (!selectedText.trim()) {
+      setErrorMessage("No section selected to re-expand. Highlight a line or paragraph first.");
+      return;
+    }
+
+    setErrorMessage(null);
+    setIsReExpandingSection(true);
+
+    try {
+      const { refinedSection } = await triggerSectionReExpansion(lecture.id, selectedText, mode);
+      // Append or replace refined section in expanded notes
+      const newExpanded = expandedNotes
+        ? `${expandedNotes}\n\n---\n### 🔄 Refined Section (${mode.replace("_", " ")}):\n${refinedSection}`
+        : refinedSection;
+
+      setExpandedNotes(newExpanded);
+      await saveContent(title, lectureDate, minimalNotes, newExpanded, summary, depthLevel);
+    } catch (err: unknown) {
+      setErrorMessage(
+        err instanceof Error ? err.message : "Failed to re-expand selected section."
+      );
+    } finally {
+      setIsReExpandingSection(false);
     }
   };
 
@@ -166,6 +225,26 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
         </div>
 
         <div className="flex items-center gap-3">
+          {/* Depth Selector (Issue #15) */}
+          <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-lg border text-xs">
+            <SlidersHorizontal className="h-3 w-3 text-muted-foreground ml-1.5" />
+            <span className="text-muted-foreground text-[11px] pr-1">Depth:</span>
+            {(["brief", "standard", "deep_dive"] as DepthLevel[]).map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => setDepthLevel(d)}
+                className={`px-2 py-0.5 rounded capitalize text-[11px] font-medium transition-colors ${
+                  depthLevel === d
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {d.replace("_", " ")}
+              </button>
+            ))}
+          </div>
+
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             {saveStatus === "saving" && (
               <>
@@ -186,15 +265,6 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
               </>
             )}
           </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => saveContent(title, lectureDate, minimalNotes, expandedNotes, summary)}
-            disabled={saveStatus === "saving"}
-            className="text-xs h-7 px-2.5"
-          >
-            Save now
-          </Button>
         </div>
       </div>
 
@@ -249,13 +319,13 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
               {expandStep === "expanding" ? "Expanding your notes..." : "Summarizing key concepts..."}
             </h3>
             <p className="text-xs text-muted-foreground max-w-sm">
-              StudyFlow is converting your keywords into comprehensive explanations and distilling critical takeaways.
+              StudyFlow is converting your keywords into comprehensive explanations ({depthLevel.replace("_", " ")}) and distilling critical takeaways.
             </p>
           </div>
         </div>
       )}
 
-      {/* If Expanded: Side-by-Side Review (Issue #12) & Editable Outputs (Issue #13) */}
+      {/* If Expanded: Side-by-Side Review & Editable Outputs */}
       {isExpanded && !isExpanding && (
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b">
@@ -281,14 +351,14 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
                 disabled={isExpanding}
                 className="gap-1.5 text-xs h-8"
               >
-                <Sparkles className="h-3.5 w-3.5 text-primary" /> Re-expand
+                <Sparkles className="h-3.5 w-3.5 text-primary" /> Re-expand All
               </Button>
             </div>
           </div>
 
-          {/* Side-by-Side Layout: Stacked on Mobile, Two-Panel on Desktop (Issue #12) */}
+          {/* Two-Panel Side-by-Side Review Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* Left Panel: Original Minimal Notes */}
+            {/* Left Panel: Original Minimal Notes with Section Re-Expansion (Issue #14) */}
             <div className="lg:col-span-4 p-4 rounded-lg border bg-muted/20 space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -298,19 +368,62 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
                   Raw Input
                 </Badge>
               </div>
+
               <Textarea
+                ref={minimalTextareaRef}
                 value={minimalNotes}
                 onChange={(e) => setMinimalNotes(e.target.value)}
-                rows={16}
+                rows={14}
                 className="text-xs font-mono leading-relaxed resize-none bg-background/80"
                 placeholder="Edit original notes..."
               />
-              <p className="text-[11px] text-muted-foreground">
-                Left panel preserves your in-class notes for accuracy comparison.
-              </p>
+
+              {/* Section-level Re-expansion Action (Issue #14) */}
+              <div className="pt-2 border-t flex items-center justify-between">
+                <span className="text-[11px] text-muted-foreground">Highlight text to re-expand:</span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={isReExpandingSection}
+                      className="gap-1 text-xs h-7 px-2"
+                    >
+                      {isReExpandingSection ? (
+                        <Loader2 className="h-3 w-3 animate-spin text-primary" />
+                      ) : (
+                        <RefreshCw className="h-3 w-3 text-primary" />
+                      )}
+                      <span>Re-expand section</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel className="text-xs">Section Options</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => handleSectionReExpand("more_detail")}
+                      className="text-xs cursor-pointer gap-2"
+                    >
+                      <PlusCircle className="h-3.5 w-3.5 text-blue-500" /> More detail
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleSectionReExpand("more_concise")}
+                      className="text-xs cursor-pointer gap-2"
+                    >
+                      <MinusCircle className="h-3.5 w-3.5 text-amber-500" /> More concise
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleSectionReExpand("regenerate")}
+                      className="text-xs cursor-pointer gap-2"
+                    >
+                      <RefreshCw className="h-3.5 w-3.5 text-green-500" /> Regenerate
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
 
-            {/* Right Panel: AI-Expanded / Summary Output with Edit/View Toggle (Issue #13) */}
+            {/* Right Panel: AI-Expanded / Summary Output with Edit/View Toggle */}
             <div className="lg:col-span-8 p-6 rounded-lg border bg-card shadow-sm min-h-[500px] flex flex-col">
               {activeTab === "notes" ? (
                 <div className="space-y-4 flex-1 flex flex-col">
@@ -407,7 +520,7 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
 
           <div className="pt-3 flex flex-wrap items-center justify-between gap-4 border-t">
             <div className="text-xs text-muted-foreground">
-              Jot down keywords in class. Auto-saves every 5 seconds.
+              Jot down keywords in class. Auto-saves every 5 seconds. Selected depth: <span className="font-semibold capitalize">{depthLevel.replace("_", " ")}</span>
             </div>
             <Button
               onClick={handleExpand}
