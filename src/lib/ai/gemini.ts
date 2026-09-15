@@ -1,8 +1,18 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { DepthLevel } from "@/types/database";
 
-const apiKey = process.env.GEMINI_API_KEY || "";
-const genAI = new GoogleGenerativeAI(apiKey);
+const DEFAULT_MODEL = "gemini-2.5-flash";
+
+function getModel() {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) {
+    throw new Error(
+      "GEMINI_API_KEY is not configured in environment variables. Please set it in .env.local",
+    );
+  }
+  const genAI = new GoogleGenerativeAI(key);
+  return genAI.getGenerativeModel({ model: DEFAULT_MODEL });
+}
 
 export interface ExpansionContext {
   courseName: string;
@@ -27,10 +37,15 @@ export interface SectionReExpansionContext {
 // 10 expansions per day per user as stated in PRD and issue tasks
 const dailyExpansionsMap = new Map<string, number[]>();
 
-export function checkRateLimit(userId: string): { allowed: boolean; remaining: number } {
+export function checkRateLimit(userId: string): {
+  allowed: boolean;
+  remaining: number;
+} {
   const now = Date.now();
   const oneDayAgo = now - 24 * 60 * 60 * 1000;
-  const timestamps = (dailyExpansionsMap.get(userId) || []).filter((t) => t > oneDayAgo);
+  const timestamps = (dailyExpansionsMap.get(userId) || []).filter(
+    (t) => t > oneDayAgo,
+  );
 
   if (timestamps.length >= 10) {
     return { allowed: false, remaining: 0 };
@@ -42,16 +57,15 @@ export function checkRateLimit(userId: string): { allowed: boolean; remaining: n
 }
 
 export async function expandNotes(context: ExpansionContext): Promise<string> {
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error("GEMINI_API_KEY is not configured in environment variables.");
-  }
-
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = getModel();
 
   const depthDescriptions: Record<DepthLevel, string> = {
-    brief: "Brief — One-line definition + key formula (if any). For quick scanning.",
-    standard: "Standard — 2–3 paragraph explanation with definition, intuition, and a practical example in a conversational study buddy tone.",
-    deep_dive: "Deep Dive — Comprehensive coverage: formal definition, intuition, multiple examples, edge cases, connections to other topics.",
+    brief:
+      "Brief — One-line definition + key formula (if any). For quick scanning.",
+    standard:
+      "Standard — 2–3 paragraph explanation with definition, intuition, and a practical example in a conversational study buddy tone.",
+    deep_dive:
+      "Deep Dive — Comprehensive coverage: formal definition, intuition, multiple examples, edge cases, connections to other topics.",
   };
 
   const depth = context.depthLevel || "standard";
@@ -82,22 +96,25 @@ Depth level: ${depthDescriptions[depth]}
   } catch (error: unknown) {
     console.error("Gemini expansion error:", error);
     throw new Error(
-      error instanceof Error ? error.message : "Failed to generate expansion from Gemini API"
+      error instanceof Error
+        ? error.message
+        : "Failed to generate expansion from Gemini API",
     );
   }
 }
 
-export async function reExpandSection(context: SectionReExpansionContext): Promise<string> {
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error("GEMINI_API_KEY is not configured in environment variables.");
-  }
-
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+export async function reExpandSection(
+  context: SectionReExpansionContext,
+): Promise<string> {
+  const model = getModel();
 
   const modeInstructions = {
-    more_detail: "Expand this section with much more depth, comprehensive explanation, additional concrete examples, formulas, and edge cases.",
-    more_concise: "Summarize and condense this section to be ultra-concise, high-signal, bulleted, focusing only on essential definitions and rules.",
-    regenerate: "Regenerate this section clearly in a friendly conversational study buddy tone with definition, intuition, and an example.",
+    more_detail:
+      "Expand this section with much more depth, comprehensive explanation, additional concrete examples, formulas, and edge cases.",
+    more_concise:
+      "Summarize and condense this section to be ultra-concise, high-signal, bulleted, focusing only on essential definitions and rules.",
+    regenerate:
+      "Regenerate this section clearly in a friendly conversational study buddy tone with definition, intuition, and an example.",
   };
 
   const prompt = `You are a friendly study buddy helping a college student refine a specific section of their study notes.
@@ -121,17 +138,15 @@ Provide the refined section in clean markdown format. Do not include meta commen
   } catch (error: unknown) {
     console.error("Gemini section re-expansion error:", error);
     throw new Error(
-      error instanceof Error ? error.message : "Failed to re-expand section from Gemini API"
+      error instanceof Error
+        ? error.message
+        : "Failed to re-expand section from Gemini API",
     );
   }
 }
 
 export async function summarizeNotes(expandedNotes: string): Promise<string> {
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error("GEMINI_API_KEY is not configured in environment variables.");
-  }
-
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = getModel();
 
   const prompt = `You are an expert study assistant. Generate a concise, high-signal summary of the following lecture notes.
 
@@ -153,17 +168,17 @@ Instructions:
   } catch (error: unknown) {
     console.error("Gemini summarization error:", error);
     throw new Error(
-      error instanceof Error ? error.message : "Failed to generate summary from Gemini API"
+      error instanceof Error
+        ? error.message
+        : "Failed to generate summary from Gemini API",
     );
   }
 }
 
-export async function generateFlashcardsFromNotes(expandedNotes: string): Promise<{ question: string; answer: string }[]> {
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error("GEMINI_API_KEY is not configured in environment variables.");
-  }
-
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+export async function generateFlashcardsFromNotes(
+  expandedNotes: string,
+): Promise<{ question: string; answer: string }[]> {
+  const model = getModel();
 
   const prompt = `Extract 5 to 10 high-value study flashcards (question-answer pairs) from the lecture notes below.
 Return strictly valid JSON with no markdown backticks, matching this exact schema:
@@ -177,7 +192,11 @@ ${expandedNotes}
 
   try {
     const result = await model.generateContent(prompt);
-    const text = (await result.response).text().trim().replace(/```json/g, "").replace(/```/g, "");
+    const text = (await result.response)
+      .text()
+      .trim()
+      .replace(/```json/g, "")
+      .replace(/```/g, "");
     return JSON.parse(text);
   } catch (error: unknown) {
     console.error("Flashcards generation error:", error);
@@ -185,12 +204,12 @@ ${expandedNotes}
   }
 }
 
-export async function answerInlineQuestion(concept: string, question: string, contextNotes: string): Promise<string> {
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error("GEMINI_API_KEY is not configured in environment variables.");
-  }
-
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+export async function answerInlineQuestion(
+  concept: string,
+  question: string,
+  contextNotes: string,
+): Promise<string> {
+  const model = getModel();
 
   const prompt = `You are a helpful study buddy. A student highlighted this concept from their lecture notes:
 "${concept}"
@@ -208,20 +227,18 @@ Provide a clear, direct, and conversational explanation in 1–2 paragraphs. Use
     const result = await model.generateContent(prompt);
     return (await result.response).text();
   } catch (error: unknown) {
-    throw new Error(error instanceof Error ? error.message : "Failed to generate answer");
+    throw new Error(
+      error instanceof Error ? error.message : "Failed to generate answer",
+    );
   }
 }
 
 export async function generateStudyGuideFromLectures(
   courseName: string,
   subjectArea: string,
-  lecturesContent: string
+  lecturesContent: string,
 ): Promise<string> {
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error("GEMINI_API_KEY is not configured in environment variables.");
-  }
-
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const model = getModel();
 
   const prompt = `You are an expert academic tutor. Create a comprehensive Exam Study Guide for the course "${courseName}" (${subjectArea}) by aggregating and synthesizing these lecture notes:
 
@@ -238,16 +255,16 @@ Instructions:
     const result = await model.generateContent(prompt);
     return (await result.response).text();
   } catch (error: unknown) {
-    throw new Error(error instanceof Error ? error.message : "Failed to generate study guide");
+    throw new Error(
+      error instanceof Error ? error.message : "Failed to generate study guide",
+    );
   }
 }
 
-export async function parseSyllabusTopicsFromText(syllabusText: string): Promise<string[]> {
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error("GEMINI_API_KEY is not configured in environment variables.");
-  }
-
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+export async function parseSyllabusTopicsFromText(
+  syllabusText: string,
+): Promise<string[]> {
+  const model = getModel();
 
   const prompt = `Extract a list of key topics and syllabus modules from this course syllabus text.
 Return strictly a valid JSON array of strings (e.g. ["Topic 1", "Topic 2"]), with no markdown backticks:
@@ -258,7 +275,11 @@ ${syllabusText.slice(0, 5000)}
 
   try {
     const result = await model.generateContent(prompt);
-    const text = (await result.response).text().trim().replace(/```json/g, "").replace(/```/g, "");
+    const text = (await result.response)
+      .text()
+      .trim()
+      .replace(/```json/g, "")
+      .replace(/```/g, "");
     return JSON.parse(text);
   } catch {
     return [];
