@@ -19,6 +19,8 @@ import {
   ListFilter,
   ArrowLeft,
   CheckCircle2,
+  Edit2,
+  Eye,
 } from "lucide-react";
 import { Lecture, Course, DepthLevel } from "@/types/database";
 import { MarkdownViewer } from "@/components/markdown-viewer";
@@ -45,16 +47,28 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("notes");
 
+  // Editable expanded notes & summary modes (Issue #13)
+  const [isEditingExpanded, setIsEditingExpanded] = useState(false);
+  const [isEditingSummary, setIsEditingSummary] = useState(false);
+
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const saveContent = useCallback(
-    async (newTitle: string, newDate: string, newNotes: string) => {
+    async (
+      newTitle: string,
+      newDate: string,
+      newMinimal: string,
+      newExpanded?: string,
+      newSummary?: string
+    ) => {
       setSaveStatus("saving");
       try {
         await updateLectureNotes(lecture.id, {
           title: newTitle.trim() || undefined,
           lecture_date: newDate,
-          minimal_notes: newNotes,
+          minimal_notes: newMinimal,
+          expanded_notes: newExpanded !== undefined ? newExpanded : undefined,
+          summary: newSummary !== undefined ? newSummary : undefined,
         });
         setSaveStatus("saved");
       } catch (err) {
@@ -65,12 +79,14 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
     [lecture.id]
   );
 
-  // Auto-save debounced every 5s
+  // Auto-save debounced every 5 seconds
   useEffect(() => {
     if (
       minimalNotes === (lecture.minimal_notes || "") &&
       title === (lecture.title || "") &&
-      lectureDate === lecture.lecture_date
+      lectureDate === lecture.lecture_date &&
+      expandedNotes === (lecture.expanded_notes || "") &&
+      summary === (lecture.summary || "")
     ) {
       return;
     }
@@ -82,7 +98,7 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
     }
 
     saveTimerRef.current = setTimeout(() => {
-      saveContent(title, lectureDate, minimalNotes);
+      saveContent(title, lectureDate, minimalNotes, expandedNotes, summary);
     }, 5000);
 
     return () => {
@@ -90,7 +106,7 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
         clearTimeout(saveTimerRef.current);
       }
     };
-  }, [minimalNotes, title, lectureDate, lecture, saveContent]);
+  }, [minimalNotes, title, lectureDate, expandedNotes, summary, lecture, saveContent]);
 
   const handleExpand = async () => {
     if (!minimalNotes.trim()) {
@@ -102,20 +118,19 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
     setIsExpanding(true);
     setExpandStep("expanding");
 
-    // Immediate save before calling AI
-    await saveContent(title, lectureDate, minimalNotes);
+    await saveContent(title, lectureDate, minimalNotes, expandedNotes, summary);
 
     try {
-      setExpandStep("expanding");
-      // Short delay simulation for progress clarity if response is fast
-      const timer = setTimeout(() => setExpandStep("summarizing"), 2000);
+      const timer = setTimeout(() => setExpandStep("summarizing"), 2500);
 
       const result = await triggerAiExpansion(lecture.id, depthLevel);
       clearTimeout(timer);
 
       setExpandedNotes(result.expandedNotes);
       setSummary(result.summary);
-      setActiveTab("notes"); // Default to Full Notes after expansion
+      setActiveTab("notes");
+      setIsEditingExpanded(false);
+      setIsEditingSummary(false);
       router.refresh();
     } catch (err: unknown) {
       setErrorMessage(
@@ -132,7 +147,7 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
   const isExpanded = Boolean(expandedNotes && expandedNotes.trim());
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-3.5rem)] max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+    <div className="flex flex-col min-h-[calc(100vh-3.5rem)] max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
       {/* Header Context & Save Status */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -146,7 +161,7 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
           </Link>
           <span>/</span>
           <Badge variant="outline" className="text-xs">
-            {isExpanded ? "Study Notes" : "Minimal Note Session"}
+            {isExpanded ? "Side-by-Side Review" : "Minimal Note Session"}
           </Badge>
         </div>
 
@@ -171,6 +186,15 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
               </>
             )}
           </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => saveContent(title, lectureDate, minimalNotes, expandedNotes, summary)}
+            disabled={saveStatus === "saving"}
+            className="text-xs h-7 px-2.5"
+          >
+            Save now
+          </Button>
         </div>
       </div>
 
@@ -195,7 +219,7 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
         </div>
       </div>
 
-      {/* Error Alert with Retry */}
+      {/* Error Alert */}
       {errorMessage && (
         <div className="flex items-center justify-between p-3.5 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
           <div className="flex items-center gap-2">
@@ -215,7 +239,7 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
 
       {/* Loading State during AI Expansion */}
       {isExpanding && (
-        <div className="p-8 rounded-xl border bg-card/60 flex flex-col items-center justify-center space-y-4 text-center animate-in fade-in duration-300">
+        <div className="p-10 rounded-xl border bg-card/60 flex flex-col items-center justify-center space-y-4 text-center animate-in fade-in duration-300">
           <div className="relative flex items-center justify-center">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
             <Sparkles className="h-4 w-4 text-primary absolute" />
@@ -231,7 +255,7 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
         </div>
       )}
 
-      {/* If Expanded: Render Tabs (Full Notes vs Summary) with Side Toggle */}
+      {/* If Expanded: Side-by-Side Review (Issue #12) & Editable Outputs (Issue #13) */}
       {isExpanded && !isExpanding && (
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b">
@@ -262,8 +286,9 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
             </div>
           </div>
 
+          {/* Side-by-Side Layout: Stacked on Mobile, Two-Panel on Desktop (Issue #12) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-            {/* Left Column: Original Minimal Notes (collapsible/review) */}
+            {/* Left Panel: Original Minimal Notes */}
             <div className="lg:col-span-4 p-4 rounded-lg border bg-muted/20 space-y-3">
               <div className="flex items-center justify-between">
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -276,25 +301,87 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
               <Textarea
                 value={minimalNotes}
                 onChange={(e) => setMinimalNotes(e.target.value)}
-                rows={10}
+                rows={16}
                 className="text-xs font-mono leading-relaxed resize-none bg-background/80"
-                placeholder="Edit your original notes..."
+                placeholder="Edit original notes..."
               />
+              <p className="text-[11px] text-muted-foreground">
+                Left panel preserves your in-class notes for accuracy comparison.
+              </p>
             </div>
 
-            {/* Right Column: AI Output (Full Notes / Summary Tabs) */}
-            <div className="lg:col-span-8 p-6 rounded-lg border bg-card shadow-sm min-h-[400px]">
+            {/* Right Panel: AI-Expanded / Summary Output with Edit/View Toggle (Issue #13) */}
+            <div className="lg:col-span-8 p-6 rounded-lg border bg-card shadow-sm min-h-[500px] flex flex-col">
               {activeTab === "notes" ? (
-                <div className="space-y-4">
-                  <MarkdownViewer content={expandedNotes} />
+                <div className="space-y-4 flex-1 flex flex-col">
+                  <div className="flex items-center justify-between pb-2 border-b">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {isEditingExpanded ? "Editing Markdown" : "Formatted Markdown"}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditingExpanded(!isEditingExpanded)}
+                      className="gap-1.5 text-xs h-7"
+                    >
+                      {isEditingExpanded ? (
+                        <>
+                          <Eye className="h-3.5 w-3.5" /> View Formatted
+                        </>
+                      ) : (
+                        <>
+                          <Edit2 className="h-3.5 w-3.5" /> Edit Notes
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {isEditingExpanded ? (
+                    <Textarea
+                      value={expandedNotes}
+                      onChange={(e) => setExpandedNotes(e.target.value)}
+                      className="flex-1 min-h-[400px] font-mono text-sm leading-relaxed p-4"
+                      placeholder="Edit your expanded notes in markdown..."
+                    />
+                  ) : (
+                    <MarkdownViewer content={expandedNotes} />
+                  )}
                 </div>
               ) : (
-                <div className="space-y-4">
-                  <div className="bg-primary/5 p-3 rounded-md border border-primary/10 text-xs text-primary font-medium flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 shrink-0" />
-                    <span>Concise Cheat Sheet (≤ 20% of expanded length)</span>
+                <div className="space-y-4 flex-1 flex flex-col">
+                  <div className="flex items-center justify-between pb-2 border-b">
+                    <div className="bg-primary/5 px-2.5 py-1 rounded text-xs text-primary font-medium flex items-center gap-1.5">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <span>Concise Summary</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsEditingSummary(!isEditingSummary)}
+                      className="gap-1.5 text-xs h-7"
+                    >
+                      {isEditingSummary ? (
+                        <>
+                          <Eye className="h-3.5 w-3.5" /> View Formatted
+                        </>
+                      ) : (
+                        <>
+                          <Edit2 className="h-3.5 w-3.5" /> Edit Summary
+                        </>
+                      )}
+                    </Button>
                   </div>
-                  <MarkdownViewer content={summary || "No summary available."} />
+
+                  {isEditingSummary ? (
+                    <Textarea
+                      value={summary}
+                      onChange={(e) => setSummary(e.target.value)}
+                      className="flex-1 min-h-[350px] font-mono text-sm leading-relaxed p-4"
+                      placeholder="Edit summary markdown..."
+                    />
+                  ) : (
+                    <MarkdownViewer content={summary || "No summary generated."} />
+                  )}
                 </div>
               )}
             </div>
@@ -314,13 +401,13 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
 • Fourier transform — breaking signals into frequencies
 • Convolution theorem — mult in freq = conv in time
 • Nyquist rate — 2× max frequency`}
-              className="flex-1 min-h-[350px] w-full resize-none font-mono text-sm sm:text-base leading-relaxed p-4 border rounded-lg bg-card/50 shadow-inner focus-visible:ring-1 placeholder:text-muted-foreground/60"
+              className="flex-1 min-h-[380px] w-full resize-none font-mono text-sm sm:text-base leading-relaxed p-4 border rounded-lg bg-card/50 shadow-inner focus-visible:ring-1 placeholder:text-muted-foreground/60"
             />
           </div>
 
           <div className="pt-3 flex flex-wrap items-center justify-between gap-4 border-t">
             <div className="text-xs text-muted-foreground">
-              Tip: Jot down keywords during class. Auto-saves every 5 seconds.
+              Jot down keywords in class. Auto-saves every 5 seconds.
             </div>
             <Button
               onClick={handleExpand}
