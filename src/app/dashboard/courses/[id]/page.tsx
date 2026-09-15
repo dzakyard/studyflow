@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeleteCourseDialog } from "@/components/delete-course-dialog";
+import { StudyGuideDialog } from "@/components/study-guide-dialog";
 import { UserMenu } from "@/components/user-menu";
 import { Course, Lecture } from "@/types/database";
 
@@ -125,11 +126,20 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
                 All note sessions sorted by lecture date (newest first)
               </p>
             </div>
-            <Link href={`/dashboard/courses/${typedCourse.id}/lectures/new`}>
-              <Button size="sm" className="gap-2 shadow-sm">
-                <Plus className="h-4 w-4" /> New Lecture
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              {typedLectures.length > 0 && (
+                <StudyGuideDialog
+                  courseId={typedCourse.id}
+                  courseName={typedCourse.name}
+                  lectures={typedLectures}
+                />
+              )}
+              <Link href={`/dashboard/courses/${typedCourse.id}/lectures/new`}>
+                <Button size="sm" className="gap-2 shadow-sm">
+                  <Plus className="h-4 w-4" /> New Lecture
+                </Button>
+              </Link>
+            </div>
           </div>
 
           {typedLectures.length === 0 ? (

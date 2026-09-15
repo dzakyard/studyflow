@@ -38,6 +38,9 @@ import { Lecture, Course, DepthLevel } from "@/types/database";
 import { MarkdownViewer } from "@/components/markdown-viewer";
 import { ShareDialog } from "@/components/share-dialog";
 import { VersionHistoryDialog } from "@/components/version-history-dialog";
+import { FlashcardDialog } from "@/components/flashcard-dialog";
+import { InlineQADialog } from "@/components/inline-qa-dialog";
+import { ExportButton } from "@/components/export-button";
 import { saveNoteVersionSnapshot } from "@/app/actions/sharing";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -350,6 +353,8 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
               <span className="text-[11px] text-muted-foreground bg-muted/60 px-2.5 py-1 rounded border hidden md:inline">
                 ✨ AI-generated — please verify
               </span>
+              <FlashcardDialog lectureId={lecture.id} hasExpandedNotes={isExpanded} />
+              <InlineQADialog lectureId={lecture.id} />
               <ShareDialog lectureId={lecture.id} lectureTitle={title || `Lecture on ${lectureDate}`} />
               <VersionHistoryDialog
                 lectureId={lecture.id}
@@ -357,6 +362,14 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
                   setExpandedNotes(exp);
                   setSummary(sum);
                 }}
+              />
+              <ExportButton
+                courseName={course.name}
+                lectureTitle={title || `Lecture on ${lectureDate}`}
+                lectureDate={lectureDate}
+                minimalNotes={minimalNotes}
+                expandedNotes={expandedNotes}
+                summary={summary}
               />
               <Button
                 variant="outline"

@@ -157,3 +157,110 @@ Instructions:
     );
   }
 }
+
+export async function generateFlashcardsFromNotes(expandedNotes: string): Promise<{ question: string; answer: string }[]> {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY is not configured in environment variables.");
+  }
+
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+  const prompt = `Extract 5 to 10 high-value study flashcards (question-answer pairs) from the lecture notes below.
+Return strictly valid JSON with no markdown backticks, matching this exact schema:
+[
+  { "question": "Question here?", "answer": "Concise answer here." }
+]
+
+Notes:
+${expandedNotes}
+`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const text = (await result.response).text().trim().replace(/```json/g, "").replace(/```/g, "");
+    return JSON.parse(text);
+  } catch (error: unknown) {
+    console.error("Flashcards generation error:", error);
+    return [];
+  }
+}
+
+export async function answerInlineQuestion(concept: string, question: string, contextNotes: string): Promise<string> {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY is not configured in environment variables.");
+  }
+
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+  const prompt = `You are a helpful study buddy. A student highlighted this concept from their lecture notes:
+"${concept}"
+
+They asked this follow-up question:
+"${question}"
+
+Context from their notes:
+${contextNotes.slice(0, 2000)}
+
+Provide a clear, direct, and conversational explanation in 1–2 paragraphs. Use markdown formatting.
+`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    return (await result.response).text();
+  } catch (error: unknown) {
+    throw new Error(error instanceof Error ? error.message : "Failed to generate answer");
+  }
+}
+
+export async function generateStudyGuideFromLectures(
+  courseName: string,
+  subjectArea: string,
+  lecturesContent: string
+): Promise<string> {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY is not configured in environment variables.");
+  }
+
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+  const prompt = `You are an expert academic tutor. Create a comprehensive Exam Study Guide for the course "${courseName}" (${subjectArea}) by aggregating and synthesizing these lecture notes:
+
+${lecturesContent}
+
+Instructions:
+1. Deduplicate overlapping concepts.
+2. Structure by major topics with clear markdown headers (##, ###).
+3. Include critical formulas, definitions, and key exam takeaways.
+4. Keep the tone approachable and high-signal for rapid exam review.
+`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    return (await result.response).text();
+  } catch (error: unknown) {
+    throw new Error(error instanceof Error ? error.message : "Failed to generate study guide");
+  }
+}
+
+export async function parseSyllabusTopicsFromText(syllabusText: string): Promise<string[]> {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY is not configured in environment variables.");
+  }
+
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+  const prompt = `Extract a list of key topics and syllabus modules from this course syllabus text.
+Return strictly a valid JSON array of strings (e.g. ["Topic 1", "Topic 2"]), with no markdown backticks:
+
+Text:
+${syllabusText.slice(0, 5000)}
+`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const text = (await result.response).text().trim().replace(/```json/g, "").replace(/```/g, "");
+    return JSON.parse(text);
+  } catch {
+    return [];
+  }
+}
