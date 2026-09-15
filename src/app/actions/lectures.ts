@@ -43,7 +43,7 @@ export async function createLecture(data: CreateLectureData) {
   }
 
   revalidatePath(`/dashboard/courses/${data.courseId}`);
-  redirect(`/dashboard/courses/${data.courseId}/lectures/${lecture.id}`);
+  return lecture;
 }
 
 export async function updateLectureNotes(
