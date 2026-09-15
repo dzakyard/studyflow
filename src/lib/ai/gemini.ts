@@ -13,6 +13,16 @@ export interface ExpansionContext {
   depthLevel?: DepthLevel;
 }
 
+export interface SectionReExpansionContext {
+  courseName: string;
+  subjectArea: string;
+  syllabusTopics?: string[];
+  textbookReference?: string | null;
+  sectionText: string;
+  mode: "more_detail" | "more_concise" | "regenerate";
+  depthLevel?: DepthLevel;
+}
+
 // In-memory rate limiting map: userId -> array of timestamps
 // 10 expansions per day per user as stated in PRD and issue tasks
 const dailyExpansionsMap = new Map<string, number[]>();
@@ -73,6 +83,45 @@ Depth level: ${depthDescriptions[depth]}
     console.error("Gemini expansion error:", error);
     throw new Error(
       error instanceof Error ? error.message : "Failed to generate expansion from Gemini API"
+    );
+  }
+}
+
+export async function reExpandSection(context: SectionReExpansionContext): Promise<string> {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY is not configured in environment variables.");
+  }
+
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+  const modeInstructions = {
+    more_detail: "Expand this section with much more depth, comprehensive explanation, additional concrete examples, formulas, and edge cases.",
+    more_concise: "Summarize and condense this section to be ultra-concise, high-signal, bulleted, focusing only on essential definitions and rules.",
+    regenerate: "Regenerate this section clearly in a friendly conversational study buddy tone with definition, intuition, and an example.",
+  };
+
+  const prompt = `You are a friendly study buddy helping a college student refine a specific section of their study notes.
+Course: ${context.courseName} (${context.subjectArea})
+Syllabus topics: ${(context.syllabusTopics || []).join(", ") || "General curriculum"}
+Textbook: ${context.textbookReference || "N/A"}
+
+Original note section to refine:
+${context.sectionText}
+
+Target instruction:
+${modeInstructions[context.mode]}
+
+Provide the refined section in clean markdown format. Do not include meta commentary or introductory remarks. Return only the refined content.
+`;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    return response.text();
+  } catch (error: unknown) {
+    console.error("Gemini section re-expansion error:", error);
+    throw new Error(
+      error instanceof Error ? error.message : "Failed to re-expand section from Gemini API"
     );
   }
 }
