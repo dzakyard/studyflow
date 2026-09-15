@@ -36,6 +36,9 @@ import {
 } from "lucide-react";
 import { Lecture, Course, DepthLevel } from "@/types/database";
 import { MarkdownViewer } from "@/components/markdown-viewer";
+import { ShareDialog } from "@/components/share-dialog";
+import { VersionHistoryDialog } from "@/components/version-history-dialog";
+import { saveNoteVersionSnapshot } from "@/app/actions/sharing";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -88,6 +91,9 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
           summary: newSummary !== undefined ? newSummary : undefined,
           depth_level: newDepth || depthLevel,
         });
+        if (newExpanded || newSummary) {
+          saveNoteVersionSnapshot(lecture.id, newExpanded || "", newSummary || "").catch(console.error);
+        }
         setSaveStatus("saved");
       } catch (err) {
         console.error("Auto-save failed:", err);
@@ -340,10 +346,18 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
               </TabsList>
             </Tabs>
 
-            <div className="flex items-center gap-2 self-end sm:self-auto">
-              <span className="text-[11px] text-muted-foreground bg-muted/60 px-2.5 py-1 rounded border">
+            <div className="flex flex-wrap items-center gap-2 self-end sm:self-auto">
+              <span className="text-[11px] text-muted-foreground bg-muted/60 px-2.5 py-1 rounded border hidden md:inline">
                 ✨ AI-generated — please verify
               </span>
+              <ShareDialog lectureId={lecture.id} lectureTitle={title || `Lecture on ${lectureDate}`} />
+              <VersionHistoryDialog
+                lectureId={lecture.id}
+                onRestore={(exp, sum) => {
+                  setExpandedNotes(exp);
+                  setSummary(sum);
+                }}
+              />
               <Button
                 variant="outline"
                 size="sm"
