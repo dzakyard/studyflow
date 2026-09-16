@@ -26,15 +26,16 @@ export function SignUpForm({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
 
   const handleGoogleSignUp = async () => {
     setError(null);
     try {
+      const supabase = createClient();
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+          redirectTo: `${origin}/auth/callback?next=/dashboard`,
         },
       });
       if (error) throw error;
@@ -55,11 +56,13 @@ export function SignUpForm({
     }
 
     try {
+      const supabase = createClient();
+      const origin = typeof window !== "undefined" ? window.location.origin : "";
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+          emailRedirectTo: `${origin}/auth/callback?next=/dashboard`,
         },
       });
       if (error) throw error;
