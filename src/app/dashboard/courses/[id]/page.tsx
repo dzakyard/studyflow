@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeleteCourseDialog } from "@/components/delete-course-dialog";
+import { DeleteLectureDialog } from "@/components/delete-lecture-dialog";
 import { StudyGuideDialog } from "@/components/study-guide-dialog";
 import { UserMenu } from "@/components/user-menu";
+import { NewLectureButton } from "@/components/new-lecture-button";
 import { Course, Lecture } from "@/types/database";
 
 interface CourseDetailPageProps {
@@ -25,28 +27,27 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
     redirect("/auth/login");
   }
 
-  const { data: course, error } = await supabase
-    .from("courses")
-    .select("*")
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .single();
+  const [courseResult, lecturesResult] = await Promise.all([
+    supabase
+      .from("courses")
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single(),
+    supabase
+      .from("lectures")
+      .select("id, course_id, title, lecture_date, expanded_notes, minimal_notes, summary")
+      .eq("course_id", id)
+      .eq("user_id", user.id)
+      .order("lecture_date", { ascending: false })
+  ]);
 
-  if (error || !course) {
+  if (courseResult.error || !courseResult.data) {
     notFound();
   }
 
-  const typedCourse = course as Course;
-
-  // Fetch lectures for this course, sorted by date (newest first)
-  const { data: lectures } = await supabase
-    .from("lectures")
-    .select("*")
-    .eq("course_id", id)
-    .eq("user_id", user.id)
-    .order("lecture_date", { ascending: false });
-
-  const typedLectures = (lectures || []) as Lecture[];
+  const typedCourse = courseResult.data as Course;
+  const typedLectures = (lecturesResult.data || []) as Lecture[];
 
   return (
     <div className="min-h-screen bg-background">
@@ -134,11 +135,7 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
                   lectures={typedLectures}
                 />
               )}
-              <Link href={`/dashboard/courses/${typedCourse.id}/lectures/new`}>
-                <Button size="sm" className="gap-2 shadow-sm">
-                  <Plus className="h-4 w-4" /> New Lecture
-                </Button>
-              </Link>
+              <NewLectureButton courseId={typedCourse.id} />
             </div>
           </div>
 
@@ -172,15 +169,22 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
                           <Calendar className="h-3 w-3" />
                           {lecture.lecture_date}
                         </span>
-                        {lecture.expanded_notes ? (
-                          <Badge variant="secondary" className="text-[10px] bg-green-500/10 text-green-700 dark:text-green-400 gap-1">
-                            <CheckCircle2 className="h-3 w-3" /> Expanded
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-[10px] gap-1">
-                            <FileText className="h-3 w-3" /> Minimal
-                          </Badge>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          {lecture.expanded_notes ? (
+                            <Badge variant="secondary" className="text-[10px] bg-green-500/10 text-green-700 dark:text-green-400 gap-1">
+                              <CheckCircle2 className="h-3 w-3" /> Expanded
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] gap-1">
+                              <FileText className="h-3 w-3" /> Minimal
+                            </Badge>
+                          )}
+                          <DeleteLectureDialog
+                            lectureId={lecture.id}
+                            courseId={typedCourse.id}
+                            lectureTitle={lecture.title || `Lecture on ${lecture.lecture_date}`}
+                          />
+                        </div>
                       </div>
                       <CardTitle className="text-base font-semibold line-clamp-1 pt-1">
                         {lecture.title || `Lecture on ${lecture.lecture_date}`}

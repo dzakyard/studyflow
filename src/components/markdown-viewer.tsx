@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
@@ -7,7 +8,7 @@ interface MarkdownViewerProps {
   content: string;
 }
 
-export function MarkdownViewer({ content }: MarkdownViewerProps) {
+export const MarkdownViewer = memo(({ content }: MarkdownViewerProps) => {
   return (
     <div className="prose prose-neutral dark:prose-invert max-w-none text-foreground space-y-4 text-sm sm:text-base leading-relaxed">
       <ReactMarkdown
@@ -65,4 +66,6 @@ export function MarkdownViewer({ content }: MarkdownViewerProps) {
       </ReactMarkdown>
     </div>
   );
-}
+});
+
+MarkdownViewer.displayName = "MarkdownViewer";

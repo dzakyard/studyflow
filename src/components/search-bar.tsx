@@ -9,15 +9,22 @@ export function SearchBar({ defaultValue = "" }: { defaultValue?: string }) {
   const router = useRouter();
   const [query, setQuery] = useState(defaultValue);
 
+  const [initialValue] = useState(defaultValue);
+
   useEffect(() => {
+    // Prevent triggering search on initial mount if the query hasn't changed
+    if (query === initialValue) return;
+
     const timer = setTimeout(() => {
       if (query.trim()) {
-        router.push(`/dashboard/search?q=${encodeURIComponent(query.trim())}`);
+        router.replace(`/dashboard/search?q=${encodeURIComponent(query.trim())}`, { scroll: false });
+      } else {
+        router.replace(`/dashboard`, { scroll: false });
       }
     }, 350); // 350ms debounced search
 
     return () => clearTimeout(timer);
-  }, [query, router]);
+  }, [query, router, initialValue]);
 
   return (
     <div className="relative w-full max-w-md">

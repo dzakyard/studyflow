@@ -21,28 +21,28 @@ export default async function LecturePage({ params }: LecturePageProps) {
     redirect("/auth/login");
   }
 
-  const { data: course } = await supabase
-    .from("courses")
-    .select("*")
-    .eq("id", courseId)
-    .eq("user_id", user.id)
-    .single();
+  const [courseResult, lectureResult] = await Promise.all([
+    supabase
+      .from("courses")
+      .select("*")
+      .eq("id", courseId)
+      .eq("user_id", user.id)
+      .single(),
+    supabase
+      .from("lectures")
+      .select("*")
+      .eq("id", lectureId)
+      .eq("course_id", courseId)
+      .eq("user_id", user.id)
+      .single()
+  ]);
 
-  if (!course) {
+  if (courseResult.error || !courseResult.data || lectureResult.error || !lectureResult.data) {
     notFound();
   }
 
-  const { data: lecture } = await supabase
-    .from("lectures")
-    .select("*")
-    .eq("id", lectureId)
-    .eq("course_id", courseId)
-    .eq("user_id", user.id)
-    .single();
-
-  if (!lecture) {
-    notFound();
-  }
+  const course = courseResult.data;
+  const lecture = lectureResult.data;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

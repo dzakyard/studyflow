@@ -25,21 +25,25 @@ async function DashboardContent() {
     redirect("/auth/login");
   }
 
-  // Fetch courses owned by current user
-  const { data: courses } = await supabase
-    .from("courses")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+  // Run queries concurrently and only select needed columns to reduce payload
+  const [coursesResult, lecturesResult] = await Promise.all([
+    supabase
+      .from("courses")
+      .select("id, name, subject_area, description, syllabus_topics, textbook_reference")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+    
+    supabase
+      .from("lectures")
+      .select("id, course_id, lecture_date, title, expanded_notes, courses(name, subject_area)")
+      .eq("user_id", user.id)
+      .order("lecture_date", { ascending: false })
+  ]);
 
-  // Fetch all user's lectures for recent feed and counts
-  const { data: allLectures } = await supabase
-    .from("lectures")
-    .select("*, courses(name, subject_area)")
-    .eq("user_id", user.id)
-    .order("lecture_date", { ascending: false });
+  const courses = coursesResult.data || [];
+  const allLectures = lecturesResult.data || [];
 
-  const lectures = (allLectures || []) as (Lecture & { courses: { name: string; subject_area: string } })[];
+  const lectures = allLectures as unknown as (Lecture & { courses: { name: string; subject_area: string } })[];
 
   // Calculate lecture count & last date per course
   const coursesWithStats: CourseWithStats[] = (courses || []).map((c) => {

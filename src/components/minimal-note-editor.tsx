@@ -35,13 +35,16 @@ import {
   MinusCircle,
 } from "lucide-react";
 import { Lecture, Course, DepthLevel } from "@/types/database";
-import { MarkdownViewer } from "@/components/markdown-viewer";
-import { ShareDialog } from "@/components/share-dialog";
-import { VersionHistoryDialog } from "@/components/version-history-dialog";
-import { FlashcardDialog } from "@/components/flashcard-dialog";
-import { InlineQADialog } from "@/components/inline-qa-dialog";
-import { ExportButton } from "@/components/export-button";
+import dynamic from "next/dynamic";
 import { saveNoteVersionSnapshot } from "@/app/actions/sharing";
+
+const MarkdownViewer = dynamic(() => import("@/components/markdown-viewer").then(mod => mod.MarkdownViewer), { ssr: false });
+const ShareDialog = dynamic(() => import("@/components/share-dialog").then(mod => mod.ShareDialog), { ssr: false });
+const VersionHistoryDialog = dynamic(() => import("@/components/version-history-dialog").then(mod => mod.VersionHistoryDialog), { ssr: false });
+const FlashcardDialog = dynamic(() => import("@/components/flashcard-dialog").then(mod => mod.FlashcardDialog), { ssr: false });
+const InlineQADialog = dynamic(() => import("@/components/inline-qa-dialog").then(mod => mod.InlineQADialog), { ssr: false });
+const ExportButton = dynamic(() => import("@/components/export-button").then(mod => mod.ExportButton), { ssr: false });
+const DeleteLectureDialog = dynamic(() => import("@/components/delete-lecture-dialog").then(mod => mod.DeleteLectureDialog), { ssr: false });
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -274,6 +277,12 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
               </>
             )}
           </div>
+
+          <DeleteLectureDialog
+            lectureId={lecture.id}
+            courseId={course.id}
+            lectureTitle={title || `Lecture on ${lectureDate}`}
+          />
         </div>
       </div>
 
