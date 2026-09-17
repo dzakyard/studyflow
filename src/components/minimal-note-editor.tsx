@@ -337,7 +337,7 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
               {expandStep === "expanding" ? "Expanding your notes..." : "Summarizing key concepts..."}
             </h3>
             <p className="text-xs text-muted-foreground max-w-sm">
-              StudyFlow is converting your keywords into comprehensive explanations ({depthLevel.replace("_", " ")}) and distilling critical takeaways.
+              DeJot is converting your keywords into comprehensive explanations ({depthLevel.replace("_", " ")}) and distilling critical takeaways.
             </p>
           </div>
         </div>

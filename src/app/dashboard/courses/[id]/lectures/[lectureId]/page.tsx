@@ -50,7 +50,7 @@ export default async function LecturePage({ params }: LecturePageProps) {
       <header className="border-b h-14 flex items-center px-4 sm:px-6 justify-between shrink-0">
         <Link href="/dashboard" className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />
-          <span className="font-bold text-lg tracking-tight">StudyFlow</span>
+          <span className="font-bold text-lg tracking-tight">DeJot</span>
         </Link>
         <UserMenu user={user} />
       </header>

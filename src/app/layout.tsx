@@ -9,8 +9,8 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "StudyFlow | AI-Powered Lecture Notes",
-  description: "Transform your minimal lecture notes into comprehensive study guides and flashcards with AI.",
+  title: "DeJot | AI-Powered Lecture Notes & Study Guides",
+  description: "De-stress your study routine. Type less in class — DeJot turns minimal keywords into structured study notes and concise cheat sheets.",
 };
 
 export const viewport = {

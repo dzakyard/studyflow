@@ -42,7 +42,7 @@ export default async function SharedLecturePage({ params }: SharedLecturePagePro
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            <span className="font-bold text-xl tracking-tight">StudyFlow</span>
+            <span className="font-bold text-xl tracking-tight">DeJot</span>
           </Link>
           <div className="flex items-center gap-2">
             <Badge variant="secondary" className="gap-1 text-xs">

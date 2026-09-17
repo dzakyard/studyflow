@@ -64,7 +64,7 @@ async function DashboardContent() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            <span className="font-bold text-xl tracking-tight">StudyFlow</span>
+            <span className="font-bold text-xl tracking-tight">DeJot</span>
           </div>
           <div className="hidden sm:block flex-1 max-w-md mx-6">
             <SearchBar />

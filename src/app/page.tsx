@@ -32,7 +32,7 @@ export default async function LandingPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            <span className="font-bold text-xl tracking-tight">StudyFlow</span>
+            <span className="font-bold text-xl tracking-tight">DeJot</span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -72,7 +72,7 @@ export default async function LandingPage() {
         </h1>
 
         <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto font-normal leading-relaxed">
-          Jot down keywords and bullet fragments in class. StudyFlow turns them into complete, structured study notes and concise cheat sheets.
+          Jot down keywords and bullet fragments in class. DeJot turns them into complete, structured study notes and concise cheat sheets.
         </p>
 
         <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -127,7 +127,7 @@ export default async function LandingPage() {
             <div className="md:col-span-7 p-6 rounded-xl border bg-card shadow-sm space-y-3 flex flex-col">
               <div className="flex items-center justify-between pb-2 border-b">
                 <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
-                  What StudyFlow Generates
+                  What DeJot Generates
                 </Badge>
                 <span className="text-[11px] text-muted-foreground">Comprehensive & Structured</span>
               </div>
@@ -203,7 +203,7 @@ export default async function LandingPage() {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
-            <span className="font-semibold text-foreground">StudyFlow</span>
+            <span className="font-semibold text-foreground">DeJot</span>
             <span>— AI Note Companion for Students</span>
           </div>
           <div>
