@@ -29,13 +29,20 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   let results: (Lecture & { courses: { name: string; subject_area: string } })[] = [];
 
   if (query) {
-    // Full-text search across minimal_notes, expanded_notes, summary, or title (using ilike)
+    // Sanitize query to prevent wildcard injection in PostgREST ilike
+    const escapedQuery = query
+      .replace(/\\/g, "\\\\")
+      .replace(/%/g, "\\%")
+      .replace(/_/g, "\\_")
+      .replace(/,/g, "");
+
+    // Search across minimal_notes, expanded_notes, summary, or title (using ilike)
     const { data } = await supabase
       .from("lectures")
       .select("*, courses(name, subject_area)")
       .eq("user_id", user.id)
       .or(
-        `title.ilike.%${query}%,minimal_notes.ilike.%${query}%,expanded_notes.ilike.%${query}%,summary.ilike.%${query}%`
+        `title.ilike.%${escapedQuery}%,minimal_notes.ilike.%${escapedQuery}%,expanded_notes.ilike.%${escapedQuery}%,summary.ilike.%${escapedQuery}%`
       )
       .order("lecture_date", { ascending: false });
 
@@ -51,7 +58,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     const end = Math.min(text.length, index + term.length + 80);
     const excerpt = (start > 0 ? "..." : "") + text.substring(start, end) + (end < text.length ? "..." : "");
 
-    const parts = excerpt.split(new RegExp(`(${term})`, "gi"));
+    const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const parts = excerpt.split(new RegExp(`(${escapedTerm})`, "gi"));
     return parts.map((part, i) =>
       part.toLowerCase() === term.toLowerCase() ? (
         <mark key={i} className="bg-yellow-200 dark:bg-yellow-900/60 text-foreground font-semibold px-0.5 rounded">
