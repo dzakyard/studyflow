@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import crypto from "crypto";
 
 export async function createShareInvite(lectureId: string, accessLevel: "view" | "edit" = "view") {
   const supabase = await createClient();
@@ -25,7 +26,7 @@ export async function createShareInvite(lectureId: string, accessLevel: "view" |
     throw new Error("Lecture not found or you do not have permission to share it.");
   }
 
-  const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  const token = crypto.randomBytes(16).toString("hex");
 
   const { data: share, error } = await supabase
     .from("shared_lectures")
@@ -53,6 +54,16 @@ export async function saveNoteVersionSnapshot(lectureId: string, expandedNotes: 
 
   if (!user) return;
 
+  // Verify lecture ownership
+  const { data: lecture } = await supabase
+    .from("lectures")
+    .select("id")
+    .eq("id", lectureId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!lecture) return;
+
   // Insert snapshot
   await supabase.from("note_versions").insert({
     lecture_id: lectureId,
@@ -60,7 +71,7 @@ export async function saveNoteVersionSnapshot(lectureId: string, expandedNotes: 
     summary,
   });
 
-  // Keep only last 10 versions
+  // Keep only last 10 versions for this lecture
   const { data: versions } = await supabase
     .from("note_versions")
     .select("id, created_at")
@@ -75,6 +86,26 @@ export async function saveNoteVersionSnapshot(lectureId: string, expandedNotes: 
 
 export async function fetchNoteVersions(lectureId: string) {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return [];
+  }
+
+  // Ensure user owns lecture or has access to it
+  const { data: lecture } = await supabase
+    .from("lectures")
+    .select("id")
+    .eq("id", lectureId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!lecture) {
+    return [];
+  }
+
   const { data } = await supabase
     .from("note_versions")
     .select("*")
@@ -92,6 +123,16 @@ export async function restoreNoteVersion(lectureId: string, versionId: string) {
   } = await supabase.auth.getUser();
 
   if (!user) throw new Error("Unauthorized");
+
+  // Verify ownership of the lecture first
+  const { data: lecture } = await supabase
+    .from("lectures")
+    .select("id")
+    .eq("id", lectureId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!lecture) throw new Error("Lecture not found or unauthorized");
 
   const { data: version } = await supabase
     .from("note_versions")
