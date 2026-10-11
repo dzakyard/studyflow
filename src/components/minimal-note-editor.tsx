@@ -139,6 +139,21 @@ export function MinimalNoteEditor({ lecture, course }: MinimalNoteEditorProps) {
     };
   }, [minimalNotes, title, lectureDate, expandedNotes, summary, depthLevel, lecture, saveContent]);
 
+  // Prevent accidental tab closure or navigation when changes are unsaved
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (saveStatus === "unsaved") {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [saveStatus]);
+
   const handleExpand = async () => {
     if (!minimalNotes.trim()) {
       setErrorMessage("Please add some notes first before triggering AI expansion.");
