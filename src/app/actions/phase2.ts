@@ -31,9 +31,6 @@ export async function createFlashcardsAction(lectureId: string) {
   const pairs = await generateFlashcardsFromNotes(lecture.expanded_notes);
 
   if (pairs.length > 0) {
-    // Delete existing cards for lecture
-    await supabase.from("flashcards").delete().eq("lecture_id", lectureId).eq("user_id", user.id);
-
     const records = pairs.map((p) => ({
       lecture_id: lectureId,
       user_id: user.id,
@@ -42,7 +39,25 @@ export async function createFlashcardsAction(lectureId: string) {
       confidence_level: 0,
     }));
 
-    await supabase.from("flashcards").insert(records);
+    const { data: inserted, error: insertError } = await supabase
+      .from("flashcards")
+      .insert(records)
+      .select("id");
+
+    if (insertError) {
+      throw new Error(`Failed to save flashcards: ${insertError.message}`);
+    }
+
+    if (inserted && inserted.length > 0) {
+      const newIds = inserted.map((r) => r.id);
+      // Clean up older cards for this lecture
+      await supabase
+        .from("flashcards")
+        .delete()
+        .eq("lecture_id", lectureId)
+        .eq("user_id", user.id)
+        .not("id", "in", `(${newIds.join(",")})`);
+    }
   }
 
   return { flashcards: pairs };
@@ -154,6 +169,13 @@ export async function generateStudyGuideAction(courseId: string, lectureIds: str
 }
 
 export async function parseSyllabusFileAction(text: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) throw new Error("Unauthorized");
+
   const topics = await parseSyllabusTopicsFromText(text);
   return { topics };
 }
